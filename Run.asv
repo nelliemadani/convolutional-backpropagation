@@ -1,0 +1,136 @@
+% Convolution Backprojection
+
+% Set image size NN
+N = 402;
+NN = 2*N+1;
+
+% Set number of projection angles
+K = 6;
+M0 = K^2;
+
+% Set filter length L
+L = NN;
+
+x = -N:N;
+y = -N:N;
+
+
+% Create orginal image (camera man)
+
+z = imread("camerman.jpg");
+
+
+figure(1);
+image(z)
+title('Orginal Image')
+xlabel('x coordinate')
+ylabel('y coordinate')
+
+
+% Forward project image to form sinogram (pz)
+
+theta=0:1:179;
+pz=radon(rgb2gray(z),theta); %line projections
+
+%pz = Project(rgb2gray(z),theta);
+
+figure(2);
+DisplayImg(pz,x,theta);
+title('Sinogram or Projections of Phantom')
+xlabel('Projection Displacement')
+ylabel('Projection Angle (degrees)')
+%% 
+
+if(print_flag==1)
+  print -dpsc tmp1
+  system('mv output.ps tmp2.ps; cat tmp2.ps tmp1.ps>output.ps;');
+else
+  pause
+end
+
+
+% Compute filter for CBP
+
+[h1,h2,h3,n] = filters(L);
+figure
+plot(n,h1)
+title('Ramp Filter Applied to Projections')
+xlabel('Sample Number')
+plot(n,h2)
+title('Cosine Filter Applied to Projections')
+xlabel('Sample Number')
+
+if(print_flag==1)
+  print -dpsc tmp1
+  system('mv output.ps tmp2.ps; cat tmp2.ps tmp1.ps>output.ps;');
+else
+  pause
+end
+
+% Apply filter to each projection angle
+
+for j=1:M0
+  tmp = conv(pz(j,:),h2);
+  pz(j,:) = tmp(L+1:L+NN);
+end
+DisplayImg(pz,x,theta)
+title('Filtered Sinogram or Projections')
+xlabel('Projection Displacement')
+ylabel('Projection Angle (degrees)')
+if(print_flag==1)
+  print -dpsc tmp1
+  system('mv output.ps tmp2.ps; cat tmp2.ps tmp1.ps>output.ps;');
+else
+  pause
+end
+
+
+% back projecti zero angle
+
+pz0 = pz(1,:);
+theta0 = 0;
+zz = BackProj(pz0,theta0);
+DisplayImg(zz,x,y)
+title('Back Projection of Angle 0')
+xlabel('x coordinate');
+ylabel('y coordinate');
+if(print_flag==1)
+  print -dpsc tmp1
+  system('mv output.ps tmp2.ps; cat tmp2.ps tmp1.ps>output.ps;');
+else
+  pause
+end
+
+
+% Progressively add Backprojections to illustrate reconstruction
+
+for k=1:(K-1)
+
+  samps = 2^k;
+  j = 1:round(M0/samps):M0;
+
+  pz0 = pz(j,:);
+  theta0 = theta(j);
+end
+
+
+% Compute full reconstruction
+
+zz = BackProj(pz,theta);
+DisplayImg(zz,x,y)
+title('Completely Reconstructed');
+xlabel('x coordinate');
+ylabel('y coordinate');
+if(print_flag==1)
+  print -dpsc tmp1
+  system('mv output.ps tmp2.ps; cat tmp2.ps tmp1.ps>output.ps;');
+else
+  pause
+end
+
+
+if(print_flag==1)
+  system('rm tmp1.ps tmp2.ps');
+end
+
+
